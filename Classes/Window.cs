@@ -58,13 +58,15 @@ namespace Game.Classes
                 }
             }
         }
-        public void ConsoleResizeEnable()
+        public bool ConsoleResizeEnable()
         {
             _resize = true;
+            return _resize;
         }
-        public void ConsoleResizeDisable()
+        public bool ConsoleResizeDisable()
         {
             _resize = false;
+            return _resize;
         }
         public void Init()
         {
@@ -131,6 +133,7 @@ namespace Game.Classes
                 }
 
                 Console.SetCursorPosition(startX, startY + i);
+                Console.ForegroundColor = ConsoleColor.White;
                 Console.Write(line);
             }
         }

@@ -23,7 +23,7 @@ namespace Game.Classes
         public Point LastPosition { get; set; }
         public bool eating { get; set; }
         private Directions _direction;
-
+        private static readonly object _lock = new object();
         public Snake(LinkedListNode<Point> head, LinkedList<Point> body, Window window, ConsoleColor headColor, 
             ConsoleColor bodyColor)
         {
@@ -125,24 +125,27 @@ namespace Game.Classes
 
         public void DeathAnimation()
         {
-            while(Body.Count > 0)
+            lock (_lock)
             {
-                Point point = Body.First.Value;
+                while (Body.Count > 0)
+                {
+                    Point point = Body.First.Value;
 
-                if (Window.GameOver.Contains(point))
-                {
+                    if (Window.GameOver.Contains(point))
+                    {
+                        Body.RemoveFirst();
+                        continue;
+                    }
+                    Console.SetCursorPosition(point.X, point.Y);
+                    if (point.Equals(Head.Value))
+                    {
+                        Console.ForegroundColor = HeadColor;
+                        Console.WriteLine("█");
+                    }
+                    Console.WriteLine(" ");
                     Body.RemoveFirst();
-                    continue;
+                    Thread.Sleep(100);
                 }
-                Console.SetCursorPosition(point.X, point.Y);
-                if (point.Equals(Head.Value))
-                {
-                    Console.ForegroundColor = HeadColor;
-                    Console.WriteLine("█");
-                }
-                Console.WriteLine(" ");
-                Body.RemoveFirst();
-                Thread.Sleep(100);
             }
         }
     }

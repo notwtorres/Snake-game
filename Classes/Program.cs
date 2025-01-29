@@ -21,6 +21,9 @@ static class GameHandler
 
     static bool alive = true;
 
+    private static Task? resizeTask;
+    private static readonly object resizeLock = new object();
+
     static void Main(string[] args)
     {
         window.ConsoleResizeDisable();
@@ -36,13 +39,21 @@ static class GameHandler
         }
         return key;
     }
+    private static void CancelAndResetToken()
+    {
+        if (cancellationTokenSource != null && !cancellationTokenSource.IsCancellationRequested)
+        {
+            cancellationTokenSource.Cancel();
+            cancellationTokenSource.Dispose();
+        }
+        cancellationTokenSource = new CancellationTokenSource();
+    }
+
     static void ResetGame()
     {
         Console.Clear();
-        cancellationTokenSource.Cancel();
-        cancellationTokenSource.Token.WaitHandle.WaitOne();
-        cancellationTokenSource.Dispose();
-        cancellationTokenSource = new CancellationTokenSource();
+        CancelAndResetToken();
+        window.ConsoleResizeDisable();
         Window.GameOver.Clear();
         snake.Body.Clear();
         snake.Head.Value = new Point(20, 20);
@@ -58,8 +69,6 @@ static class GameHandler
         ConsoleKey key = GetValidkey(new ConsoleKey[]  { ConsoleKey.Escape, ConsoleKey.Enter });
         if (key.Equals(ConsoleKey.Enter))
         {
-            window.TextResizeDisable();
-            window.ConsoleResizeEnable();
             ResetGame();
             Start();
         }
@@ -68,28 +77,34 @@ static class GameHandler
             Environment.Exit(0);
         }
     }
-
+    private static void MonitorConsoleResize()
+    {
+        while (!cancellationTokenSource.Token.IsCancellationRequested)
+        {
+            window.ConsoleResize();
+            Thread.Sleep(50);
+        }
+    }
+    private static void StartResizeTask()
+    {
+        lock (resizeLock)
+        {
+            if (resizeTask == null || resizeTask.IsCompleted)
+            {
+                resizeTask = Task.Run(() => MonitorConsoleResize(), cancellationTokenSource.Token);
+            }
+        }
+    }
     static void Start()
     {
         Console.Clear();
+        window.TextResizeDisable();
         window.CalculateFrame();
         window.DrawFrame();
-
-        if(cancellationTokenSource != null)
-        {
-            cancellationTokenSource.Cancel();
-            cancellationTokenSource.Token.WaitHandle.WaitOne();
-            cancellationTokenSource.Dispose();
-        }
-        cancellationTokenSource = new CancellationTokenSource();
-
-        Task.Run(() =>
-        {
-            while (!cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                window.ConsoleResize();
-            }
-        }, cancellationTokenSource.Token);
+        window.TextResizeDisable();
+        window.ConsoleResizeEnable();
+        CancelAndResetToken();
+        StartResizeTask();
         snake.BodyInit(5);
         GetFoodPosition();
         Update();
@@ -104,6 +119,7 @@ static class GameHandler
             snake.Move();
             snake.BodyMove();
             OnCollisionEnter();
+            if(!alive) break;
             Thread.Sleep(75);
         }
     }
@@ -165,10 +181,11 @@ static class GameHandler
             if (snake.Head.Value.Equals(itemn))
             {
                 alive = false;
+                window.TextResizeEnable();
                 Task.Run(() => snake.DeathAnimation(), cancellationTokenSource.Token);
                 Task.Run(() =>
                 {
-                    Console.ForegroundColor = ConsoleColor.Black;
+                    Console.ForegroundColor = ConsoleColor.White;
                     window.ResizeAndPrintCenteredText(Menu.GameOver, cancellationTokenSource);
                 }, cancellationTokenSource.Token);
                 ConsoleKey key = GetValidkey(new ConsoleKey[] { ConsoleKey.Escape, ConsoleKey.Enter });
