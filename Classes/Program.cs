@@ -11,7 +11,7 @@ static class GameHandler
 
     static Window window = new Window("Game", ConsoleColor.Red, ConsoleColor.White);
 
-    static Snake snake = new Snake(new LinkedListNode<Point>(new Point(20, 20)), new LinkedList<Point>(), window,
+    static Snake snake = new Snake(new LinkedListNode<Point>(new Point(10, 10)), new LinkedList<Point>(), window,
         ConsoleColor.Black, ConsoleColor.White);
 
     static Food food = new Food(ConsoleColor.Black, new Point(rnd.Next(window.MaxPoint.X + 1, window.MinPoint.X - 1),
@@ -56,7 +56,7 @@ static class GameHandler
         window.ConsoleResizeDisable();
         Window.GameOver.Clear();
         snake.Body.Clear();
-        snake.Head.Value = new Point(20, 20);
+        snake.Head.Value = new Point(10, 10);
         snake.ResetDirection();
         snake.eating = false;
         alive = true;
@@ -105,7 +105,7 @@ static class GameHandler
         window.ConsoleResizeEnable();
         CancelAndResetToken();
         StartResizeTask();
-        snake.BodyInit(5);
+        snake.BodyInit(2);
         GetFoodPosition();
         Update();
         Console.ReadKey();
@@ -134,6 +134,8 @@ static class GameHandler
         {
             if (food.Position.Equals(item))
             {
+                Console.SetCursorPosition(food.Position.X, food.Position.Y);
+                Console.WriteLine("▓");
                 GetFoodPosition();
             }
             food.Draw();
